@@ -125,7 +125,7 @@ private:
   {
     ImGui::Begin("Options");
 
-    const char* items[] = { "YUV420", "YUYV422" , "UYVY422", "NV12", "YVYU"};
+    const char* items[] = { "YUV420", "YUYV422" , "UYVY422", "YVYU422", "NV12", "NV21"};
     ImGui::Combo("format", &format_item_index, items, IM_ARRAYSIZE(items));
 
     ImGui::InputInt("width", &yuv_width);

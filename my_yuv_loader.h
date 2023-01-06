@@ -17,7 +17,7 @@ extern "C" {
 #include <fstream>
 #include <string>
 
-enum class YUVFormat { kYUV420 = 0, kYUYV422, kUYVY422, kNV12, kYVYU };
+enum class YUVFormat { kYUV420 = 0, kYUYV422, kUYVY422, kYVYU422, kNV12, kNV21 };
 
 class YUVFileLoader {
 public:
@@ -51,12 +51,13 @@ public:
       updateTextureYUV420(width, height);
       break;
     case YUVFormat::kYUYV422:
-    case YUVFormat::kYVYU:
+    case YUVFormat::kYVYU422:
     case YUVFormat::kUYVY422:
       updateTexturePacketYUV422(width);
       break;
     case YUVFormat::kNV12:
-      updateTextureNV12(width, height);
+    case YUVFormat::kNV21:
+      updateTextureNV(width, height);
       break;
     }
 
@@ -73,16 +74,25 @@ private:
 
     auto sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
 
-    if (format == YUVFormat::kYUV420) {
+    switch (format) {
+    case YUVFormat::kYUV420:
       sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
-    } else if (format == YUVFormat::kNV12) {
-      sdl_pixel_format = SDL_PIXELFORMAT_NV12;
-    } else if (format == YUVFormat::kYUYV422) {
+      break;
+    case YUVFormat::kYUYV422:
       sdl_pixel_format = SDL_PIXELFORMAT_YUY2;
-    } else if (format == YUVFormat::kUYVY422) {
+      break;
+    case YUVFormat::kUYVY422:
       sdl_pixel_format = SDL_PIXELFORMAT_UYVY;
-    } else if(format == YUVFormat::kYVYU){
+      break;
+    case YUVFormat::kNV12:
+      sdl_pixel_format = SDL_PIXELFORMAT_NV12;
+      break;
+    case YUVFormat::kYVYU422:
       sdl_pixel_format = SDL_PIXELFORMAT_YVYU;
+      break;
+    case YUVFormat::kNV21:
+      sdl_pixel_format = SDL_PIXELFORMAT_NV21;
+      break;
     }
 
     texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
@@ -105,7 +115,7 @@ private:
     }
   }
 
-  void updateTextureNV12(size_t width, size_t height) {
+  void updateTextureNV(size_t width, size_t height) {
     if (file_contents_.empty()) {
       return;
     }
