@@ -17,7 +17,7 @@ extern "C" {
 #include <fstream>
 #include <string>
 
-enum class YUVFormat { kYUV420 = 0, kYUYV422, kUYVY422, kNV12 };
+enum class YUVFormat { kYUV420 = 0, kYUYV422, kUYVY422, kNV12, kYVYU };
 
 class YUVFileLoader {
 public:
@@ -53,6 +53,8 @@ public:
       updateTextureUYVY422(width, height);
     } else if (format == YUVFormat::kNV12) {
       updateTextureNV12(width, height);
+    } else if(format == YUVFormat::kYVYU){
+      updateTextureYVYU(width, height);
     }
 
     return texture_;
@@ -76,6 +78,8 @@ private:
       sdl_pixel_format = SDL_PIXELFORMAT_YUY2;
     } else if (format == YUVFormat::kUYVY422) {
       sdl_pixel_format = SDL_PIXELFORMAT_UYVY;
+    } else if(format == YUVFormat::kYVYU){
+      sdl_pixel_format = SDL_PIXELFORMAT_YVYU;
     }
 
     texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
@@ -128,6 +132,17 @@ private:
   }
 
   void updateTextureUYVY422(size_t width, size_t height) {
+    if (file_contents_.empty()) {
+      return;
+    }
+
+    auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
+    auto pitch = 2 * width;
+    SDL_UpdateTexture(texture_, nullptr, yuv_data, pitch);
+  }
+
+  void updateTextureYVYU(size_t width, size_t height)
+  {
     if (file_contents_.empty()) {
       return;
     }
