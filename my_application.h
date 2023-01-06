@@ -2,8 +2,8 @@
 // Created by user on 1/5/23.
 //
 
-#ifndef SIMPLE_YUV_VIEWER_MY_RENDER_H
-#define SIMPLE_YUV_VIEWER_MY_RENDER_H
+#ifndef SIMPLE_YUV_VIEWER_MY_APPLICATION_H
+#define SIMPLE_YUV_VIEWER_MY_APPLICATION_H
 #pragma once
 
 #include "imgui.h"
@@ -15,10 +15,11 @@ class Application {
 public:
   Application() = default;
 
-  void RenderGUI()
+  void RenderGUI(SDL_Texture* yuv_image_texture)
   {
     showDockSpace();
     showYUVOptions();
+    showYUVImage(yuv_image_texture);
   }
 
 
@@ -118,8 +119,16 @@ private:
     ImGui::End();
   }
 
+  void showYUVImage(SDL_Texture* yuv_image_texture)
+  {
+    ImGui::Begin("YUV Image");
+    ImGui::Text("size = %d x %d", yuv_width, yuv_height);
+    ImGui::Image((void*)(intptr_t)yuv_image_texture, ImVec2(yuv_width, yuv_height));
+    ImGui::End();
+  }
+
 };
 
 }
 
-#endif // SIMPLE_YUV_VIEWER_MY_RENDER_H
+#endif // SIMPLE_YUV_VIEWER_MY_APPLICATION_H
