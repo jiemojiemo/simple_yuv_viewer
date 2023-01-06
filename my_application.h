@@ -9,6 +9,7 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_sdlrenderer.h"
+#include "my_yuv_loader.h"
 
 namespace MyApp {
 class Application {
@@ -19,7 +20,21 @@ public:
   {
     showDockSpace();
     showYUVOptions();
+
     showYUVImage(yuv_image_texture);
+  }
+
+  void RenderGUI(YUVFileLoader& loader, SDL_Renderer *renderer)
+  {
+    showDockSpace();
+    showYUVOptions();
+    ImGui::ShowDemoWindow();
+    if(loader.getLoadFilePath().empty()){
+      showDragToOpenWindow();
+    }else
+    {
+      showYUVImage(loader, renderer);
+    }
   }
 
 
@@ -124,6 +139,37 @@ private:
     ImGui::Begin("YUV Image");
     ImGui::Text("size = %d x %d", yuv_width, yuv_height);
     ImGui::Image((void*)(intptr_t)yuv_image_texture, ImVec2(yuv_width, yuv_height));
+    ImGui::End();
+  }
+
+  void showYUVImage(YUVFileLoader& loader, SDL_Renderer *renderer)
+  {
+    SDL_Texture* image_texture = loader.updateTexture(YUVFormat::kYUV420, yuv_width, yuv_height,
+                                                          renderer);
+    ImGui::Begin("YUV Image");
+    ImGui::Text("size = %d x %d", yuv_width, yuv_height);
+    ImGui::Image((void*)(intptr_t)image_texture, ImVec2(yuv_width, yuv_height));
+    ImGui::End();
+  }
+
+  void showDragToOpenWindow()
+  {
+    auto textCentered = [](std::string text) {
+      auto windowWidth = ImGui::GetWindowSize().x;
+      auto windowHeight = ImGui::GetWindowSize().y;
+
+      auto textSize = ImGui::CalcTextSize(text.c_str());
+      auto textWidth   = textSize.x;
+      auto textHeight = textSize.y;
+
+      ImGui::SetCursorPosX((windowWidth - textWidth) * 0.5f);
+      ImGui::SetCursorPosY((windowHeight - textHeight) * 0.5f);
+      ImGui::Text("%s", text.c_str());
+    };
+
+    ImGui::SetNextWindowSize({300, 200}, ImGuiCond_Always);
+    ImGui::Begin("Drag");
+    textCentered("Drag YUV File Here To Open");
     ImGui::End();
   }
 

@@ -25,14 +25,23 @@ public:
   bool loadFile(const std::string &file_path) {
     std::ifstream in(file_path, std::ios::in | std::ios::binary);
     if (in) {
+      filepath_ = file_path;
       in.seekg(0, std::ios::end);
       file_contents_.resize(in.tellg());
       in.seekg(0, std::ios::beg);
       in.read(&file_contents_[0], file_contents_.size());
       in.close();
       return true;
+    } else {
+      filepath_ = "";
+      file_contents_.clear();
     }
     return false;
+  }
+
+  const std::string& getLoadFilePath() const
+  {
+    return filepath_;
   }
 
   SDL_Texture *updateTexture(YUVFormat format, size_t width, size_t height,
@@ -63,8 +72,7 @@ private:
   }
 
   void createTextureIfNeed(size_t width, size_t height,
-                           SDL_Renderer *renderer)
-  {
+                           SDL_Renderer *renderer) {
     if (texture_ == nullptr) {
       createTexture(width, height, renderer);
     } else {
@@ -75,23 +83,31 @@ private:
     }
   }
 
-  void updateTextureYUV420(size_t width, size_t height)
-  {
+  void updateTextureYUV420(size_t width, size_t height) {
+    if (file_contents_.empty()) {
+      return;
+    }
+
+    auto content_size = file_contents_.size();
     auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
     auto *y_plane = yuv_data;
     size_t y_stride = width;
 
-    auto *u_plane = yuv_data + width * height;
+    auto u_offset = width * height;
+    u_offset = (u_offset > content_size) ? (content_size) : (u_offset);
+    auto *u_plane = yuv_data + u_offset;
     size_t u_stride = width / 2;
 
-    auto *v_plane = u_plane + (width * height) / 4;
+    auto v_offset = u_offset + (width * height) / 4;
+    v_offset = (v_offset > content_size) ? (content_size) : (v_offset);
+    auto *v_plane = yuv_data + v_offset;
     size_t v_stride = width / 2;
 
     SDL_UpdateYUVTexture(
         texture_, // the texture to update
-        nullptr, // a pointer to the rectangle of pixels to update, or NULL to
+        nullptr,  // a pointer to the rectangle of pixels to update, or NULL to
                   // update the entire texture
-        y_plane, // the raw pixel data for the Y plane
+        y_plane,  // the raw pixel data for the Y plane
         y_stride, // the number of bytes between rows of pixel data for the Y
                   // plane
         u_plane,  // the raw pixel data for the U plane
@@ -104,6 +120,7 @@ private:
   }
 
   std::string file_contents_;
+  std::string filepath_;
   SDL_Texture *texture_{nullptr};
 };
 

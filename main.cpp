@@ -32,6 +32,8 @@ int main(int argc, char *argv[]) {
       SDL_CreateWindow("My SDL Empty window", SDL_WINDOWPOS_UNDEFINED,
                        SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_RESIZABLE);
 
+  SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+
   SDL_Renderer *renderer = SDL_CreateRenderer(
       window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
   if (renderer == NULL) {
@@ -60,12 +62,9 @@ int main(int argc, char *argv[]) {
 
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-  bool show_demo_window = true;
   bool done = false;
   MyApp::Application gui_render;
-  std::string yuv_path = "/Users/user/Downloads/rainbow-yuv420p.yuv";
   YUVFileLoader yuv_loader;
-  yuv_loader.loadFile(yuv_path);
 
   while (!done) {
     SDL_Event event;
@@ -77,6 +76,12 @@ int main(int argc, char *argv[]) {
           event.window.event == SDL_WINDOWEVENT_CLOSE &&
           event.window.windowID == SDL_GetWindowID(window))
         done = true;
+
+      if(event.type == SDL_DROPFILE)
+      {
+        yuv_loader.loadFile(event.drop.file);
+      }
+
     }
 
     // Start the Dear ImGui frame
@@ -84,9 +89,7 @@ int main(int argc, char *argv[]) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    SDL_Texture* image_texture = yuv_loader.updateTexture(YUVFormat::kYUV420, gui_render.yuv_width, gui_render.yuv_height,
-                                                          renderer);
-    gui_render.RenderGUI(image_texture);
+    gui_render.RenderGUI(yuv_loader, renderer);
 
     // Rendering
     ImGui::Render();
