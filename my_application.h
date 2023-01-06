@@ -125,7 +125,7 @@ private:
   {
     ImGui::Begin("Options");
 
-    const char* items[] = { "YUV420", "YUV444", "YUV422" };
+    const char* items[] = { "YUV420", "YUV444", "YUV422" , "NV12"};
     ImGui::Combo("format", &format_item_index, items, IM_ARRAYSIZE(items));
 
     ImGui::InputInt("width", &yuv_width);
@@ -144,7 +144,7 @@ private:
 
   void showYUVImage(YUVFileLoader& loader, SDL_Renderer *renderer)
   {
-    SDL_Texture* image_texture = loader.updateTexture(YUVFormat::kYUV420, yuv_width, yuv_height,
+    SDL_Texture* image_texture = loader.updateTexture(YUVFormat(format_item_index), yuv_width, yuv_height,
                                                           renderer);
     ImGui::Begin("YUV Image");
     ImGui::Text("size = %d x %d", yuv_width, yuv_height);
