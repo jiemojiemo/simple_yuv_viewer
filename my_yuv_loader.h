@@ -17,7 +17,7 @@ extern "C" {
 #include <fstream>
 #include <string>
 
-enum class YUVFormat { kYUV420 = 0, kYUV444, kYUYV422, kNV12 };
+enum class YUVFormat { kYUV420 = 0, kYUYV422, kUYVY422, kNV12 };
 
 class YUVFileLoader {
 public:
@@ -49,9 +49,9 @@ public:
       updateTextureYUV420(width, height);
     } else if (format == YUVFormat::kYUYV422) {
       updateTextureYUYV422(width, height);
-    } else if (format == YUVFormat::kYUV444) {
-      updateTextureYUV444(width, height);
-    }else if(format == YUVFormat::kNV12){
+    } else if (format == YUVFormat::kUYVY422) {
+      updateTextureUYVY422(width, height);
+    } else if (format == YUVFormat::kNV12) {
       updateTextureNV12(width, height);
     }
 
@@ -59,7 +59,8 @@ public:
   }
 
 private:
-  void createTexture(YUVFormat format, size_t width, size_t height, SDL_Renderer *renderer) {
+  void createTexture(YUVFormat format, size_t width, size_t height,
+                     SDL_Renderer *renderer) {
     if (texture_ != nullptr) {
       SDL_DestroyTexture(texture_);
       texture_ = nullptr;
@@ -67,17 +68,18 @@ private:
 
     auto sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
 
-    if(format == YUVFormat::kYUV420){
+    if (format == YUVFormat::kYUV420) {
       sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
-    }else if(format == YUVFormat::kNV12){
+    } else if (format == YUVFormat::kNV12) {
       sdl_pixel_format = SDL_PIXELFORMAT_NV12;
-    }else if(format == YUVFormat::kYUYV422){
+    } else if (format == YUVFormat::kYUYV422) {
       sdl_pixel_format = SDL_PIXELFORMAT_YUY2;
+    } else if (format == YUVFormat::kUYVY422) {
+      sdl_pixel_format = SDL_PIXELFORMAT_UYVY;
     }
 
     texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
                                  SDL_TEXTUREACCESS_STREAMING, width, height);
-
   }
 
   void createTextureIfNeed(YUVFormat format, size_t width, size_t height,
@@ -89,7 +91,8 @@ private:
       auto tex_height = 0;
       Uint32 tex_format = 0;
       SDL_QueryTexture(texture_, &tex_format, NULL, &tex_width, &tex_height);
-      if (width != tex_width || height != tex_height || tex_format != Uint32(format)) {
+      if (width != tex_width || height != tex_height ||
+          tex_format != Uint32(format)) {
         createTexture(format, width, height, renderer);
       }
     }
@@ -120,7 +123,17 @@ private:
     }
 
     auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
-    auto pitch = 2*width;
+    auto pitch = 2 * width;
+    SDL_UpdateTexture(texture_, nullptr, yuv_data, pitch);
+  }
+
+  void updateTextureUYVY422(size_t width, size_t height) {
+    if (file_contents_.empty()) {
+      return;
+    }
+
+    auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
+    auto pitch = 2 * width;
     SDL_UpdateTexture(texture_, nullptr, yuv_data, pitch);
   }
 
