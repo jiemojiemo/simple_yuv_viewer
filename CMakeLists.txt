@@ -15,7 +15,7 @@ target_include_directories(imgui_sdl2_impl PUBLIC
         ${imgui_src_dir}
         ${imgui_src_dir}/backends
         ${SDL2_INCLUDE_DIRS})
-target_compile_features(imgui_sdl2_impl PUBLIC cxx_std_14)
+target_compile_features(imgui_sdl2_impl PUBLIC cxx_std_17)
 target_link_libraries(imgui_sdl2_impl PUBLIC ${SDL2_LIBRARIES} "-framework OpenGl")
 
 add_executable(yuv_viewer main.cpp)
