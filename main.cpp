@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
   int window_height = 480;
   SDL_Window *window =
       SDL_CreateWindow("My SDL Empty window", SDL_WINDOWPOS_UNDEFINED,
-                       SDL_WINDOWPOS_UNDEFINED, window_width, window_height, 0);
+                       SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_RESIZABLE);
 
   SDL_Renderer *renderer = SDL_CreateRenderer(
       window, -1, SDL_RENDERER_PRESENTVSYNC | SDL_RENDERER_ACCELERATED);
@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
 
   bool show_demo_window = true;
   bool done = false;
-  MyRender::GUIRender gui_render;
+  MyApp::Application gui_render;
   std::string yuv_path = "/Users/user/Downloads/rainbow-yuv420p.yuv";
   YUVFileLoader yuv_loader;
   yuv_loader.loadFile(yuv_path);
@@ -173,10 +173,7 @@ int main(int argc, char *argv[]) {
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
 
-    if (show_demo_window)
-      ImGui::ShowDemoWindow(&show_demo_window);
-
-    gui_render.Render();
+    gui_render.RenderGUI();
 
     {
       SDL_Texture* image_texture = yuv_loader.updateTexture(YUVFormat::kYUV420, gui_render.yuv_width, gui_render.yuv_height,
