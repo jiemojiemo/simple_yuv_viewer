@@ -155,7 +155,6 @@ int main(int argc, char *argv[]) {
   std::string yuv_path = "/Users/user/Downloads/rainbow-yuv420p.yuv";
   YUVFileLoader yuv_loader;
   yuv_loader.loadFile(yuv_path);
-  size_t width = 700, height = 700;
 
   while (!done) {
     SDL_Event event;
@@ -179,21 +178,23 @@ int main(int argc, char *argv[]) {
 
     gui_render.Render();
 
+    {
+      SDL_Texture* image_texture = yuv_loader.updateTexture(YUVFormat::kYUV420, gui_render.yuv_width, gui_render.yuv_height,
+                                 renderer);
+
+      ImGui::Begin("SDL Texture Text");
+      ImGui::Text("size = %d x %d", gui_render.yuv_width, gui_render.yuv_height);
+      ImGui::Image((void*)(intptr_t)image_texture, ImVec2(gui_render.yuv_width, gui_render.yuv_height));
+      ImGui::End();
+    }
+
     // Rendering
     ImGui::Render();
     SDL_SetRenderDrawColor(
         renderer, (Uint8)(clear_color.x * 255), (Uint8)(clear_color.y * 255),
         (Uint8)(clear_color.z * 255), (Uint8)(clear_color.w * 255));
     SDL_RenderClear(renderer);
-    SDL_RenderCopy(
-        renderer, // the rendering context
-        yuv_loader.updateTexture(YUVFormat::kYUV420, gui_render.width, gui_render.height,
-                                 renderer), // the source texture
-        NULL, // the source SDL_Rect structure or NULL for the entire texture
-        NULL  // the destination SDL_Rect structure or NULL for the entire
-              // rendering target; the texture will be stretched to fill the
-              // given rectangle
-    );
+
     ImGui_ImplSDLRenderer_RenderDrawData(ImGui::GetDrawData());
     SDL_RenderPresent(renderer);
   }
