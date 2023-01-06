@@ -45,16 +45,19 @@ public:
                              SDL_Renderer *renderer) {
 
     createTextureIfNeed(format, width, height, renderer);
-    if (format == YUVFormat::kYUV420) {
+
+    switch (format) {
+    case YUVFormat::kYUV420:
       updateTextureYUV420(width, height);
-    } else if (format == YUVFormat::kYUYV422) {
-      updateTextureYUYV422(width, height);
-    } else if (format == YUVFormat::kUYVY422) {
-      updateTextureUYVY422(width, height);
-    } else if (format == YUVFormat::kNV12) {
+      break;
+    case YUVFormat::kYUYV422:
+    case YUVFormat::kYVYU:
+    case YUVFormat::kUYVY422:
+      updateTexturePacketYUV422(width);
+      break;
+    case YUVFormat::kNV12:
       updateTextureNV12(width, height);
-    } else if(format == YUVFormat::kYVYU){
-      updateTextureYVYU(width, height);
+      break;
     }
 
     return texture_;
@@ -121,27 +124,7 @@ private:
                         uv_stride);
   }
 
-  void updateTextureYUYV422(size_t width, size_t height) {
-    if (file_contents_.empty()) {
-      return;
-    }
-
-    auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
-    auto pitch = 2 * width;
-    SDL_UpdateTexture(texture_, nullptr, yuv_data, pitch);
-  }
-
-  void updateTextureUYVY422(size_t width, size_t height) {
-    if (file_contents_.empty()) {
-      return;
-    }
-
-    auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
-    auto pitch = 2 * width;
-    SDL_UpdateTexture(texture_, nullptr, yuv_data, pitch);
-  }
-
-  void updateTextureYVYU(size_t width, size_t height)
+  void updateTexturePacketYUV422(size_t width)
   {
     if (file_contents_.empty()) {
       return;
