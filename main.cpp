@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
   int window_width = 640;
   int window_height = 480;
   SDL_Window *window =
-      SDL_CreateWindow("My SDL Empty window", SDL_WINDOWPOS_UNDEFINED,
+      SDL_CreateWindow("Simple YUV viewer", SDL_WINDOWPOS_UNDEFINED,
                        SDL_WINDOWPOS_UNDEFINED, window_width, window_height, SDL_WINDOW_RESIZABLE);
 
   SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
