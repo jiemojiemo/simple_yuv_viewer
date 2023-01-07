@@ -19,7 +19,6 @@ public:
   void RenderGUI(YUVFileLoader &loader, SDL_Renderer *renderer) {
     showDockSpace();
     showYUVSettings();
-    ImGui::ShowDemoWindow();
     if (loader.getLoadFilePath().empty()) {
       showDragToOpenWindow();
     } else {
