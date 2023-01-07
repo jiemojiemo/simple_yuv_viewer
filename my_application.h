@@ -16,13 +16,6 @@ class Application {
 public:
   Application() = default;
 
-  void RenderGUI(SDL_Texture *yuv_image_texture) {
-    showDockSpace();
-    showYUVSettings();
-
-    showYUVImage(yuv_image_texture);
-  }
-
   void RenderGUI(YUVFileLoader &loader, SDL_Renderer *renderer) {
     showDockSpace();
     showYUVSettings();
@@ -98,7 +91,7 @@ private:
     }
 
     if (ImGui::BeginMenuBar()) {
-      if (ImGui::BeginMenu("Options")) {
+      if (ImGui::BeginMenu("Docking Space Options")) {
         // Disabling fullscreen would allow the window to be moved to the front
         // of other windows, which we can't undo at the moment without finer
         // window depth/z control.
@@ -152,35 +145,38 @@ private:
     ImGui::InputInt("height", &yuv_height);
     ImGui::Separator();
 
-    ImGui::Checkbox("Y", &y_check);
-    ImGui::SameLine();
-    ImGui::Checkbox("U", &u_check);
-    ImGui::SameLine();
-    ImGui::Checkbox("V", &v_check);
-    ImGui::SameLine();
+    auto format = YUVFormat(format_item_index);
+    if (format != YUVFormat::kYUYV422 && format != YUVFormat::kUYVY422 &&
+        format != YUVFormat::kYVYU422) {
+      ImGui::Checkbox("Y", &y_check);
+      ImGui::SameLine();
+      ImGui::Checkbox("U", &u_check);
+      ImGui::SameLine();
+      ImGui::Checkbox("V", &v_check);
+      ImGui::SameLine();
+    }
 
-    ImGui::End();
-  }
-
-  void showYUVImage(SDL_Texture *yuv_image_texture) {
-    ImGui::Begin("YUV Image");
-    ImGui::Text("size = %d x %d", yuv_width, yuv_height);
-    ImGui::Image((void *)(intptr_t)yuv_image_texture,
-                 ImVec2(yuv_width, yuv_height));
     ImGui::End();
   }
 
   void showYUVImage(YUVFileLoader &loader, SDL_Renderer *renderer) {
-    YUVSetting setting;
+    YUVSetting setting{};
     setting.format = YUVFormat(format_item_index);
     setting.width = yuv_width;
     setting.height = yuv_height;
+    setting.show_y = y_check;
+    setting.show_u = u_check;
+    setting.show_v = v_check;
 
     SDL_Texture *image_texture = loader.updateTexture(setting, renderer);
-    ImGui::Begin("YUV Image");
+
+    auto image_size = ImVec2{float(yuv_width), float(yuv_height)};
+    ImGui::SetNextWindowSize(image_size,ImGuiCond_Always);
+    ImGui::Begin("YUV Image", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
     ImGui::Text("size = %d x %d", yuv_width, yuv_height);
+    ImGui::Separator();
     ImGui::Image((void *)(intptr_t)image_texture,
-                 ImVec2(yuv_width, yuv_height));
+                 image_size);
     ImGui::End();
   }
 

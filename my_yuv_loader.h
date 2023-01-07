@@ -152,6 +152,15 @@ private:
     auto *uv_plane = yuv_data + uv_offset;
     size_t uv_stride = setting.width;
 
+    if(!setting.show_y){
+      y_plane = fake_128_data_.data();
+    }
+
+    if(!setting.show_u || !setting.show_v){
+      uv_plane = fake_128_data_.data();
+    }
+
+
     SDL_UpdateNVTexture(texture_, nullptr, y_plane, y_stride, uv_plane,
                         uv_stride);
   }
@@ -185,6 +194,18 @@ private:
     v_offset = (v_offset > content_size) ? (content_size) : (v_offset);
     auto *v_plane = yuv_data + v_offset;
     size_t v_stride = setting.width / 2;
+
+    if(!setting.show_y){
+      y_plane = fake_128_data_.data();
+    }
+
+    if(!setting.show_u){
+      u_plane = fake_128_data_.data();
+    }
+
+    if(!setting.show_v){
+      v_plane = fake_128_data_.data();
+    }
 
     SDL_UpdateYUVTexture(
         texture_, // the texture to update
