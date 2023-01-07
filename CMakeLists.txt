@@ -4,7 +4,7 @@ project(simple_yuv_viewer)
 
 find_package(SDL2 REQUIRED)
 
-set(imgui_src_dir "/Users/user/Documents/develop/imgui")
+set(imgui_src_dir "${CMAKE_CURRENT_SOURCE_DIR}/imgui")
 file(GLOB imgui_src_files ${imgui_src_dir}/*.cpp)
 add_library(imgui_sdl2_impl
         ${imgui_src_files}
