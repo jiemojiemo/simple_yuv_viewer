@@ -87,7 +87,7 @@ public:
   }
 
 private:
-  void createTexture(YUVFormat format, size_t width, size_t height,
+  void createTexture(const YUVSetting& setting,
                      SDL_Renderer *renderer) {
     if (texture_ != nullptr) {
       SDL_DestroyTexture(texture_);
@@ -96,7 +96,7 @@ private:
 
     auto sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
 
-    switch (format) {
+    switch (setting.format) {
     case YUVFormat::kYUV420:
       sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
       break;
@@ -118,13 +118,13 @@ private:
     }
 
     texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
-                                 SDL_TEXTUREACCESS_STREAMING, width, height);
+                                 SDL_TEXTUREACCESS_STREAMING, setting.width, setting.height);
   }
 
   void createTextureIfNeed(const YUVSetting& setting,
                            SDL_Renderer *renderer) {
     if (texture_ == nullptr) {
-      createTexture(setting.format, setting.width, setting.height, renderer);
+      createTexture(setting, renderer);
     } else {
       auto tex_width = 0;
       auto tex_height = 0;
@@ -132,7 +132,7 @@ private:
       SDL_QueryTexture(texture_, &tex_format, NULL, &tex_width, &tex_height);
       if (setting.width != tex_width || setting.height != tex_height ||
           tex_format != Uint32(setting.format)) {
-        createTexture(setting.format, setting.width, setting.height, renderer);
+        createTexture(setting, renderer);
       }
     }
   }
@@ -163,16 +163,6 @@ private:
 
     auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
     auto pitch = 2 * setting.width;
-    SDL_UpdateTexture(texture_, nullptr, yuv_data, pitch);
-  }
-
-  void updateTexturePacketYUV422(size_t width) {
-    if (file_contents_.empty()) {
-      return;
-    }
-
-    auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
-    auto pitch = 2 * width;
     SDL_UpdateTexture(texture_, nullptr, yuv_data, pitch);
   }
 
