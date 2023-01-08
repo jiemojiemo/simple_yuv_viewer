@@ -17,14 +17,16 @@ extern "C" {
 #include <fstream>
 #include <string>
 #include <vector>
+#include "libyuv.h"
 
 enum class YUVFormat {
   kYUV420 = 0,
+  kYUV422,
   kYUYV422,
   kUYVY422,
   kYVYU422,
   kNV12,
-  kNV21
+  kNV21,
 };
 
 struct YUVSetting
@@ -48,7 +50,7 @@ public:
       in.seekg(0, std::ios::end);
       file_contents_.resize(in.tellg());
       in.seekg(0, std::ios::beg);
-      in.read(&file_contents_[0], file_contents_.size());
+      in.read((char*)(file_contents_.data()), file_contents_.size());
       in.close();
 
       fake_128_data_.resize(file_contents_.size(), 128);
@@ -80,6 +82,9 @@ public:
     case YUVFormat::kNV12:
     case YUVFormat::kNV21:
       updateTextureNV(setting);
+      break;
+    case YUVFormat::kYUV422:
+      convertYUVToRGBAndUpdateTexture(setting);
       break;
     }
 
@@ -115,6 +120,9 @@ private:
     case YUVFormat::kNV21:
       sdl_pixel_format = SDL_PIXELFORMAT_NV21;
       break;
+    case YUVFormat::kYUV422:
+      sdl_pixel_format = SDL_PIXELFORMAT_RGBA32;
+      break;
     }
 
     texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
@@ -135,6 +143,41 @@ private:
         createTexture(setting, renderer);
       }
     }
+  }
+
+  void convertYUVToRGBAndUpdateTexture(const YUVSetting& setting){
+    if (file_contents_.empty()) {
+      return;
+    }
+
+    if(setting.format == YUVFormat::kYUV422){
+      auto content_size = file_contents_.size();
+      auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
+      auto *y_plane = yuv_data;
+      size_t y_stride = setting.width;
+
+      auto u_offset = setting.width * setting.height;
+      u_offset = (u_offset > content_size) ? (content_size) : (u_offset);
+      auto *u_plane = yuv_data + u_offset;
+      size_t u_stride = setting.width / 2;
+
+      auto v_offset = u_offset + (setting.width * setting.height) / 2;
+      v_offset = (v_offset > content_size) ? (content_size) : (v_offset);
+      auto *v_plane = yuv_data + v_offset;
+      size_t v_stride = setting.width / 2;
+
+      std::vector<uint8_t> rgba_data(setting.width * setting.height * 4);
+      libyuv::I422ToABGR(y_plane,
+                         y_stride,
+                         u_plane,
+                         u_stride,
+                         v_plane,
+                         v_stride,
+                         rgba_data.data(), setting.width*4, setting.width, setting.height);
+      auto pitch = setting.width * 4;
+      SDL_UpdateTexture(texture_, nullptr, rgba_data.data(), pitch);
+    }
+
   }
 
   void updateTextureNV(const YUVSetting& setting) {
@@ -223,7 +266,7 @@ private:
     );
   }
 
-  std::string file_contents_;
+  std::vector<uint8_t> file_contents_;
   std::vector<uint8_t> fake_128_data_;
   std::string filepath_;
   SDL_Texture *texture_{nullptr};

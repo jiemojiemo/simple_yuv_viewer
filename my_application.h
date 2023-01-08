@@ -19,6 +19,7 @@ public:
   void RenderGUI(YUVFileLoader &loader, SDL_Renderer *renderer) {
     showDockSpace();
     showYUVSettings();
+    ImGui::ShowDemoWindow();
     if (loader.getLoadFilePath().empty()) {
       showDragToOpenWindow();
     } else {
@@ -137,7 +138,7 @@ private:
   void showYUVSettings() {
     ImGui::Begin("Settings");
 
-    const char *items[] = {"YUV420",  "YUYV422", "UYVY422",
+    const char *items[] = {"YUV420",  "YUV422", "YUYV422", "UYVY422",
                            "YVYU422", "NV12",    "NV21"};
     ImGui::Combo("format", &format_item_index, items, IM_ARRAYSIZE(items));
     ImGui::InputInt("width", &yuv_width);
@@ -147,16 +148,15 @@ private:
     auto format = YUVFormat(format_item_index);
     if (format != YUVFormat::kYUYV422 && format != YUVFormat::kUYVY422 &&
         format != YUVFormat::kYVYU422) {
-      ImGui::Checkbox("Y", &y_check);
-      ImGui::SameLine();
-      ImGui::Checkbox("U", &u_check);
-      ImGui::SameLine();
-      ImGui::Checkbox("V", &v_check);
-      ImGui::SameLine();
+      ImGui::Text("Channels:");
+      ImGui::SameLine();ImGui::Checkbox("Y", &y_check);
+      ImGui::SameLine();ImGui::Checkbox("U", &u_check);
+      ImGui::SameLine();ImGui::Checkbox("V", &v_check);
     }
 
     ImGui::End();
   }
+
 
   void showYUVImage(YUVFileLoader &loader, SDL_Renderer *renderer) {
     YUVSetting setting{};
