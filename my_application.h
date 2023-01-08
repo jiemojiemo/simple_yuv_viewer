@@ -36,6 +36,7 @@ public:
   int crop_y = 0;
   int crop_width = 100;
   int crop_height = 100;
+  int rotation = 0;
   bool y_check = true;
   bool u_check = true;
   bool v_check = true;
@@ -169,8 +170,6 @@ private:
     // operations
     ImGui::Selectable("Scale", &show_scale_win);
     ImGui::Selectable("Crop", &show_crop_win);
-    ImGui::Selectable("Rotation", &show_rotation_win);
-
 
     ImGui::End();
   }
@@ -211,19 +210,28 @@ private:
   {
     if(show_crop_win){
       SDL_Texture *crop_texture = loader.cropAndUpdateTexture(setting, renderer);
-      auto image_size = ImVec2{float(crop_width), float(crop_height)};
+      auto dst_width = setting.crop_width;
+      auto dst_height = setting.crop_height;
+      if (setting.rotation == 90 || setting.rotation == 270) {
+        dst_width = setting.crop_height;
+        dst_height = setting.crop_width;
+      }
+      auto image_size = ImVec2{float(dst_width), float(dst_height)};
 
       ImGui::Begin("Crop", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
       ImGui::InputInt("crop x", &crop_x);
       ImGui::InputInt("crop y", &crop_y);
       ImGui::InputInt("crop width", &crop_width);
       ImGui::InputInt("crop height", &crop_height);
+      ImGui::RadioButton("Rotation 0", &rotation, 0); ImGui::SameLine();
+      ImGui::RadioButton("Rotation 90", &rotation, 90); ImGui::SameLine();
+      ImGui::RadioButton("Rotation 180", &rotation, 180); ImGui::SameLine();
+      ImGui::RadioButton("Rotation 270", &rotation, 270);
 
       ImGui::Image((void *)(intptr_t)crop_texture, image_size);
       ImGui::End();
     }
   }
-
   void showYUVImage(YUVFileLoader &loader, SDL_Renderer *renderer) {
     YUVSetting setting{};
     setting.format = YUVFormat(format_item_index);
@@ -238,11 +246,11 @@ private:
     setting.crop_y = crop_y;
     setting.crop_width = crop_width;
     setting.crop_height = crop_height;
+    setting.rotation = rotation;
 
     showYUVOriginImage(loader, renderer, setting);
     showScaleYUVImage(loader, renderer, setting);
     showCropYUVImage(loader, renderer, setting);
-
   }
 
   void showDragToOpenWindow() {
