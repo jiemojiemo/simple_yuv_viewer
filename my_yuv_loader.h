@@ -21,7 +21,8 @@ extern "C" {
 
 enum class YUVFormat {
   kYUV420 = 0,
-  kYUV422,
+  kYUV422P,
+  kYUV444P,
   kYUYV422,
   kUYVY422,
   kYVYU422,
@@ -83,7 +84,8 @@ public:
     case YUVFormat::kNV21:
       updateTextureNV(setting);
       break;
-    case YUVFormat::kYUV422:
+    case YUVFormat::kYUV422P:
+    case YUVFormat::kYUV444P:
       convertYUVToRGBAndUpdateTexture(setting);
       break;
     }
@@ -120,7 +122,8 @@ private:
     case YUVFormat::kNV21:
       sdl_pixel_format = SDL_PIXELFORMAT_NV21;
       break;
-    case YUVFormat::kYUV422:
+    case YUVFormat::kYUV422P:
+    case YUVFormat::kYUV444P:
       sdl_pixel_format = SDL_PIXELFORMAT_RGBA32;
       break;
     }
@@ -145,17 +148,62 @@ private:
     }
   }
 
+  void yuvToRGBA(const YUVSetting& setting,
+                 uint8_t* y_plane,
+                 size_t y_stride,
+                 uint8_t* u_plane,
+                 size_t u_stride,
+                 uint8_t* v_plane,
+                 size_t v_stride,
+                 std::vector<uint8_t>& dst_rgba_data)
+  {
+
+    if(!setting.show_y){
+      y_plane = fake_128_data_.data();
+    }
+
+    if(!setting.show_u){
+      u_plane = fake_128_data_.data();
+    }
+
+    if(!setting.show_v){
+      v_plane = fake_128_data_.data();
+    }
+
+
+    if(setting.format == YUVFormat::kYUV422P){
+      libyuv::I422ToABGR(y_plane,
+                         y_stride,
+                         u_plane,
+                         u_stride,
+                         v_plane,
+                         v_stride,
+                         dst_rgba_data.data(), setting.width*4, setting.width, setting.height);
+    }else if(setting.format == YUVFormat::kYUV444P){
+      libyuv::I444ToABGR(y_plane,
+                         y_stride,
+                         u_plane,
+                         u_stride,
+                         v_plane,
+                         v_stride,
+                         dst_rgba_data.data(), setting.width*4, setting.width, setting.height);
+    }
+
+  }
+
   void convertYUVToRGBAndUpdateTexture(const YUVSetting& setting){
     if (file_contents_.empty()) {
       return;
     }
 
-    if(setting.format == YUVFormat::kYUV422){
-      auto content_size = file_contents_.size();
-      auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
-      auto *y_plane = yuv_data;
-      size_t y_stride = setting.width;
+    auto content_size = file_contents_.size();
+    auto *yuv_data = file_contents_.data();
+    auto *y_plane = yuv_data;
+    size_t y_stride = setting.width;
+    std::vector<uint8_t> rgba_data(setting.width * setting.height * 4);
+    auto rgba_pitch = setting.width * 4;
 
+    if(setting.format == YUVFormat::kYUV422P){
       auto u_offset = setting.width * setting.height;
       u_offset = (u_offset > content_size) ? (content_size) : (u_offset);
       auto *u_plane = yuv_data + u_offset;
@@ -166,18 +214,31 @@ private:
       auto *v_plane = yuv_data + v_offset;
       size_t v_stride = setting.width / 2;
 
-      std::vector<uint8_t> rgba_data(setting.width * setting.height * 4);
-      libyuv::I422ToABGR(y_plane,
-                         y_stride,
-                         u_plane,
-                         u_stride,
-                         v_plane,
-                         v_stride,
-                         rgba_data.data(), setting.width*4, setting.width, setting.height);
-      auto pitch = setting.width * 4;
-      SDL_UpdateTexture(texture_, nullptr, rgba_data.data(), pitch);
+      yuvToRGBA(setting,
+                y_plane,y_stride,
+                u_plane, u_stride,
+                v_plane, v_stride,
+                rgba_data);
+
+    }else if(setting.format == YUVFormat::kYUV444P){
+      auto u_offset = setting.width * setting.height;
+      u_offset = (u_offset > content_size) ? (content_size) : (u_offset);
+      auto *u_plane = yuv_data + u_offset;
+      size_t u_stride = setting.width;
+
+      auto v_offset = u_offset + setting.width * setting.height;
+      v_offset = (v_offset > content_size) ? (content_size) : (v_offset);
+      auto *v_plane = yuv_data + v_offset;
+      size_t v_stride = setting.width;
+
+      yuvToRGBA(setting,
+                y_plane,y_stride,
+                u_plane, u_stride,
+                v_plane, v_stride,
+                rgba_data);
     }
 
+    SDL_UpdateTexture(texture_, nullptr, rgba_data.data(), rgba_pitch);
   }
 
   void updateTextureNV(const YUVSetting& setting) {

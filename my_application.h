@@ -138,7 +138,7 @@ private:
   void showYUVSettings() {
     ImGui::Begin("Settings");
 
-    const char *items[] = {"YUV420",  "YUV422", "YUYV422", "UYVY422",
+    const char *items[] = {"YUV420",  "YUV422P", "YUV444P", "YUYV422", "UYVY422",
                            "YVYU422", "NV12",    "NV21"};
     ImGui::Combo("format", &format_item_index, items, IM_ARRAYSIZE(items));
     ImGui::InputInt("width", &yuv_width);
