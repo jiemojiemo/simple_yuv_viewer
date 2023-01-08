@@ -30,9 +30,14 @@ public:
   int format_item_index = 0;
   int yuv_width = 100;
   int yuv_height = 100;
+  int scale_width = 100;
+  int scale_height = 100;
   bool y_check = true;
   bool u_check = true;
   bool v_check = true;
+  bool show_scale_win = false;
+  bool show_crop_win = false;
+  bool show_rotation_win = false;
 
 private:
   void showDockSpace() {
@@ -138,6 +143,7 @@ private:
   void showYUVSettings() {
     ImGui::Begin("Settings");
 
+    // format and sieze
     const char *items[] = {"YUV420",  "YUV422P", "YUV444P", "YUYV422", "UYVY422",
                            "YVYU422", "NV12",    "NV21"};
     ImGui::Combo("format", &format_item_index, items, IM_ARRAYSIZE(items));
@@ -145,6 +151,7 @@ private:
     ImGui::InputInt("height", &yuv_height);
     ImGui::Separator();
 
+    // channels
     auto format = YUVFormat(format_item_index);
     if (format != YUVFormat::kYUYV422 && format != YUVFormat::kUYVY422 &&
         format != YUVFormat::kYVYU422) {
@@ -153,6 +160,13 @@ private:
       ImGui::SameLine();ImGui::Checkbox("U", &u_check);
       ImGui::SameLine();ImGui::Checkbox("V", &v_check);
     }
+    ImGui::Separator();
+
+    // operations
+    ImGui::Selectable("Scale", &show_scale_win);
+    ImGui::Selectable("Crop", &show_crop_win);
+    ImGui::Selectable("Rotation", &show_rotation_win);
+
 
     ImGui::End();
   }
@@ -166,17 +180,31 @@ private:
     setting.show_y = y_check;
     setting.show_u = u_check;
     setting.show_v = v_check;
+    setting.scale_width = scale_width;
+    setting.scale_height = scale_height;
 
     SDL_Texture *image_texture = loader.updateTexture(setting, renderer);
 
     auto image_size = ImVec2{float(yuv_width), float(yuv_height)};
     ImGui::SetNextWindowSize(image_size,ImGuiCond_Always);
     ImGui::Begin("YUV Image", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("size = %d x %d", yuv_width, yuv_height);
     ImGui::Separator();
     ImGui::Image((void *)(intptr_t)image_texture,
                  image_size);
     ImGui::End();
+
+    if(show_scale_win){
+      SDL_Texture *scaled_texture = loader.scaleAndUpdateTexture(setting, renderer);
+      auto scaled_image_size = ImVec2{float(scale_width), float(scale_height)};
+
+      ImGui::Begin("Scale", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+      ImGui::InputInt("width", &scale_width);
+      ImGui::InputInt("height", &scale_height);
+
+      ImGui::Image((void *)(intptr_t)scaled_texture,
+                   scaled_image_size);
+      ImGui::End();
+    }
   }
 
   void showDragToOpenWindow() {

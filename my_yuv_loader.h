@@ -14,10 +14,10 @@ extern "C" {
 };
 #endif
 
+#include "libyuv.h"
 #include <fstream>
 #include <string>
 #include <vector>
-#include "libyuv.h"
 
 enum class YUVFormat {
   kYUV420 = 0,
@@ -30,16 +30,16 @@ enum class YUVFormat {
   kNV21,
 };
 
-struct YUVSetting
-{
+struct YUVSetting {
   YUVFormat format;
   int width;
   int height;
   bool show_y;
   bool show_u;
   bool show_v;
+  int scale_width;
+  int scale_height;
 };
-
 
 class YUVFileLoader {
 public:
@@ -51,7 +51,7 @@ public:
       in.seekg(0, std::ios::end);
       file_contents_.resize(in.tellg());
       in.seekg(0, std::ios::beg);
-      in.read((char*)(file_contents_.data()), file_contents_.size());
+      in.read((char *)(file_contents_.data()), file_contents_.size());
       in.close();
 
       fake_128_data_.resize(file_contents_.size(), 128);
@@ -66,10 +66,8 @@ public:
 
   const std::string &getLoadFilePath() const { return filepath_; }
 
-  SDL_Texture* updateTexture(const YUVSetting& setting,
-                             SDL_Renderer *renderer
-                             )
-  {
+  SDL_Texture *updateTexture(const YUVSetting &setting,
+                             SDL_Renderer *renderer) {
     createTextureIfNeed(setting, renderer);
     switch (setting.format) {
     case YUVFormat::kYUV420:
@@ -93,9 +91,56 @@ public:
     return texture_;
   }
 
+  SDL_Texture *scaleAndUpdateTexture(const YUVSetting &setting,
+                                     SDL_Renderer *renderer) {
+    if(scaled_texture_ != nullptr){
+      SDL_DestroyTexture(scaled_texture_);
+      scaled_texture_ = nullptr;
+    }
+
+    auto sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
+
+    switch (setting.format) {
+    case YUVFormat::kYUV420:
+      sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
+      break;
+    case YUVFormat::kYUYV422:
+      sdl_pixel_format = SDL_PIXELFORMAT_YUY2;
+      break;
+    case YUVFormat::kUYVY422:
+      sdl_pixel_format = SDL_PIXELFORMAT_UYVY;
+      break;
+    case YUVFormat::kNV12:
+      sdl_pixel_format = SDL_PIXELFORMAT_NV12;
+      break;
+    case YUVFormat::kYVYU422:
+      sdl_pixel_format = SDL_PIXELFORMAT_YVYU;
+      break;
+    case YUVFormat::kNV21:
+      sdl_pixel_format = SDL_PIXELFORMAT_NV21;
+      break;
+    case YUVFormat::kYUV422P:
+    case YUVFormat::kYUV444P:
+      sdl_pixel_format = SDL_PIXELFORMAT_RGBA32;
+      break;
+    }
+
+    scaled_texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
+                                 SDL_TEXTUREACCESS_STREAMING, setting.scale_width,
+                                 setting.scale_height);
+
+
+    switch (setting.format) {
+    case YUVFormat::kYUV420:
+      scaleYUV420(setting);
+      break;
+    }
+
+    return scaled_texture_;
+  }
+
 private:
-  void createTexture(const YUVSetting& setting,
-                     SDL_Renderer *renderer) {
+  void createTexture(const YUVSetting &setting, SDL_Renderer *renderer) {
     if (texture_ != nullptr) {
       SDL_DestroyTexture(texture_);
       texture_ = nullptr;
@@ -129,11 +174,11 @@ private:
     }
 
     texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
-                                 SDL_TEXTUREACCESS_STREAMING, setting.width, setting.height);
+                                 SDL_TEXTUREACCESS_STREAMING, setting.width,
+                                 setting.height);
   }
 
-  void createTextureIfNeed(const YUVSetting& setting,
-                           SDL_Renderer *renderer) {
+  void createTextureIfNeed(const YUVSetting &setting, SDL_Renderer *renderer) {
     if (texture_ == nullptr) {
       createTexture(setting, renderer);
     } else {
@@ -148,50 +193,34 @@ private:
     }
   }
 
-  void yuvToRGBA(const YUVSetting& setting,
-                 uint8_t* y_plane,
-                 size_t y_stride,
-                 uint8_t* u_plane,
-                 size_t u_stride,
-                 uint8_t* v_plane,
-                 size_t v_stride,
-                 std::vector<uint8_t>& dst_rgba_data)
-  {
+  void yuvToRGBA(const YUVSetting &setting, uint8_t *y_plane, size_t y_stride,
+                 uint8_t *u_plane, size_t u_stride, uint8_t *v_plane,
+                 size_t v_stride, std::vector<uint8_t> &dst_rgba_data) {
 
-    if(!setting.show_y){
+    if (!setting.show_y) {
       y_plane = fake_128_data_.data();
     }
 
-    if(!setting.show_u){
+    if (!setting.show_u) {
       u_plane = fake_128_data_.data();
     }
 
-    if(!setting.show_v){
+    if (!setting.show_v) {
       v_plane = fake_128_data_.data();
     }
 
-
-    if(setting.format == YUVFormat::kYUV422P){
-      libyuv::I422ToABGR(y_plane,
-                         y_stride,
-                         u_plane,
-                         u_stride,
-                         v_plane,
-                         v_stride,
-                         dst_rgba_data.data(), setting.width*4, setting.width, setting.height);
-    }else if(setting.format == YUVFormat::kYUV444P){
-      libyuv::I444ToABGR(y_plane,
-                         y_stride,
-                         u_plane,
-                         u_stride,
-                         v_plane,
-                         v_stride,
-                         dst_rgba_data.data(), setting.width*4, setting.width, setting.height);
+    if (setting.format == YUVFormat::kYUV422P) {
+      libyuv::I422ToABGR(y_plane, y_stride, u_plane, u_stride, v_plane,
+                         v_stride, dst_rgba_data.data(), setting.width * 4,
+                         setting.width, setting.height);
+    } else if (setting.format == YUVFormat::kYUV444P) {
+      libyuv::I444ToABGR(y_plane, y_stride, u_plane, u_stride, v_plane,
+                         v_stride, dst_rgba_data.data(), setting.width * 4,
+                         setting.width, setting.height);
     }
-
   }
 
-  void convertYUVToRGBAndUpdateTexture(const YUVSetting& setting){
+  void convertYUVToRGBAndUpdateTexture(const YUVSetting &setting) {
     if (file_contents_.empty()) {
       return;
     }
@@ -203,7 +232,7 @@ private:
     std::vector<uint8_t> rgba_data(setting.width * setting.height * 4);
     auto rgba_pitch = setting.width * 4;
 
-    if(setting.format == YUVFormat::kYUV422P){
+    if (setting.format == YUVFormat::kYUV422P) {
       auto u_offset = setting.width * setting.height;
       u_offset = (u_offset > content_size) ? (content_size) : (u_offset);
       auto *u_plane = yuv_data + u_offset;
@@ -214,13 +243,10 @@ private:
       auto *v_plane = yuv_data + v_offset;
       size_t v_stride = setting.width / 2;
 
-      yuvToRGBA(setting,
-                y_plane,y_stride,
-                u_plane, u_stride,
-                v_plane, v_stride,
-                rgba_data);
+      yuvToRGBA(setting, y_plane, y_stride, u_plane, u_stride, v_plane,
+                v_stride, rgba_data);
 
-    }else if(setting.format == YUVFormat::kYUV444P){
+    } else if (setting.format == YUVFormat::kYUV444P) {
       auto u_offset = setting.width * setting.height;
       u_offset = (u_offset > content_size) ? (content_size) : (u_offset);
       auto *u_plane = yuv_data + u_offset;
@@ -231,17 +257,14 @@ private:
       auto *v_plane = yuv_data + v_offset;
       size_t v_stride = setting.width;
 
-      yuvToRGBA(setting,
-                y_plane,y_stride,
-                u_plane, u_stride,
-                v_plane, v_stride,
-                rgba_data);
+      yuvToRGBA(setting, y_plane, y_stride, u_plane, u_stride, v_plane,
+                v_stride, rgba_data);
     }
 
     SDL_UpdateTexture(texture_, nullptr, rgba_data.data(), rgba_pitch);
   }
 
-  void updateTextureNV(const YUVSetting& setting) {
+  void updateTextureNV(const YUVSetting &setting) {
     if (file_contents_.empty()) {
       return;
     }
@@ -256,20 +279,19 @@ private:
     auto *uv_plane = yuv_data + uv_offset;
     size_t uv_stride = setting.width;
 
-    if(!setting.show_y){
+    if (!setting.show_y) {
       y_plane = fake_128_data_.data();
     }
 
-    if(!setting.show_u || !setting.show_v){
+    if (!setting.show_u || !setting.show_v) {
       uv_plane = fake_128_data_.data();
     }
-
 
     SDL_UpdateNVTexture(texture_, nullptr, y_plane, y_stride, uv_plane,
                         uv_stride);
   }
 
-  void updateTexturePacketYUV422(const YUVSetting& setting) {
+  void updateTexturePacketYUV422(const YUVSetting &setting) {
     if (file_contents_.empty()) {
       return;
     }
@@ -279,7 +301,7 @@ private:
     SDL_UpdateTexture(texture_, nullptr, yuv_data, pitch);
   }
 
-  void updateTextureYUV420(const YUVSetting& setting) {
+  void scaleYUV420(const YUVSetting &setting) {
     if (file_contents_.empty()) {
       return;
     }
@@ -299,15 +321,68 @@ private:
     auto *v_plane = yuv_data + v_offset;
     size_t v_stride = setting.width / 2;
 
-    if(!setting.show_y){
+    auto scaled_data_size = setting.scale_width * setting.scale_height * 3 / 2;
+    std::vector<uint8_t> scaled_data(scaled_data_size, 0);
+    auto *dst_y_plane = scaled_data.data();
+    auto dst_y_stride = setting.scale_width;
+    auto *dst_u_plane =
+        dst_y_plane + (setting.scale_width * setting.scale_height);
+    auto dst_u_stride = setting.scale_width / 2;
+    auto *dst_v_plane =
+        dst_u_plane + (setting.scale_width * setting.scale_height / 4);
+    auto dst_v_stride = setting.scale_width / 2;
+
+    libyuv::I420Scale(y_plane, y_stride, u_plane, u_stride, v_plane, v_stride,
+                      setting.width, setting.height, dst_y_plane, dst_y_stride,
+                      dst_u_plane, dst_u_stride, dst_v_plane, dst_v_stride,
+                      setting.scale_width, setting.scale_height,
+                      libyuv::FilterMode::kFilterLinear);
+
+    SDL_UpdateYUVTexture(
+        scaled_texture_, // the texture to update
+        nullptr,  // a pointer to the rectangle of pixels to update, or NULL to
+                  // update the entire texture
+        dst_y_plane,  // the raw pixel data for the Y plane
+        dst_y_stride, // the number of bytes between rows of pixel data for the Y
+                  // plane
+        dst_u_plane,  // the raw pixel data for the U plane
+        dst_u_stride, // the number of bytes between rows of pixel data for the U
+                  // plane
+        dst_v_plane,  // the raw pixel data for the V plane
+        dst_v_stride  // the number of bytes between rows of pixel data for the V
+                  // plane
+    );
+  }
+
+  void updateTextureYUV420(const YUVSetting &setting) {
+    if (file_contents_.empty()) {
+      return;
+    }
+
+    auto content_size = file_contents_.size();
+    auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
+    auto *y_plane = yuv_data;
+    size_t y_stride = setting.width;
+
+    auto u_offset = setting.width * setting.height;
+    u_offset = (u_offset > content_size) ? (content_size) : (u_offset);
+    auto *u_plane = yuv_data + u_offset;
+    size_t u_stride = setting.width / 2;
+
+    auto v_offset = u_offset + (setting.width * setting.height) / 4;
+    v_offset = (v_offset > content_size) ? (content_size) : (v_offset);
+    auto *v_plane = yuv_data + v_offset;
+    size_t v_stride = setting.width / 2;
+
+    if (!setting.show_y) {
       y_plane = fake_128_data_.data();
     }
 
-    if(!setting.show_u){
+    if (!setting.show_u) {
       u_plane = fake_128_data_.data();
     }
 
-    if(!setting.show_v){
+    if (!setting.show_v) {
       v_plane = fake_128_data_.data();
     }
 
@@ -331,6 +406,7 @@ private:
   std::vector<uint8_t> fake_128_data_;
   std::string filepath_;
   SDL_Texture *texture_{nullptr};
+  SDL_Texture *scaled_texture_{nullptr};
 };
 
 #endif // SIMPLE_YUV_VIEWER_MY_YUV_LOADER_H
