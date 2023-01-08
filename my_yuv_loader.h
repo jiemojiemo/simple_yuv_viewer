@@ -314,23 +314,23 @@ private:
     auto u_offset = setting.width * setting.height;
     u_offset = (u_offset > content_size) ? (content_size) : (u_offset);
     auto *u_plane = yuv_data + u_offset;
-    size_t u_stride = setting.width / 2;
+    size_t u_stride = (setting.width + 1) / 2;
 
     auto v_offset = u_offset + (setting.width * setting.height) / 4;
     v_offset = (v_offset > content_size) ? (content_size) : (v_offset);
     auto *v_plane = yuv_data + v_offset;
-    size_t v_stride = setting.width / 2;
+    size_t v_stride = (setting.width + 1) / 2;
 
     auto scaled_data_size = setting.scale_width * setting.scale_height * 3 / 2;
-    std::vector<uint8_t> scaled_data(scaled_data_size, 0);
-    auto *dst_y_plane = scaled_data.data();
+    scaled_data_.resize(scaled_data_size, 0);
+    auto *dst_y_plane = scaled_data_.data();
     auto dst_y_stride = setting.scale_width;
     auto *dst_u_plane =
         dst_y_plane + (setting.scale_width * setting.scale_height);
-    auto dst_u_stride = setting.scale_width / 2;
+    auto dst_u_stride = (setting.scale_width + 1) / 2;
     auto *dst_v_plane =
         dst_u_plane + (setting.scale_width * setting.scale_height / 4);
-    auto dst_v_stride = setting.scale_width / 2;
+    auto dst_v_stride = (setting.scale_width + 1) / 2;
 
     libyuv::I420Scale(y_plane, y_stride, u_plane, u_stride, v_plane, v_stride,
                       setting.width, setting.height, dst_y_plane, dst_y_stride,
@@ -403,6 +403,7 @@ private:
   }
 
   std::vector<uint8_t> file_contents_;
+  std::vector<uint8_t> scaled_data_;
   std::vector<uint8_t> fake_128_data_;
   std::string filepath_;
   SDL_Texture *texture_{nullptr};
