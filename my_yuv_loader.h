@@ -39,6 +39,10 @@ struct YUVSetting {
   bool show_v;
   int scale_width;
   int scale_height;
+  int crop_x;
+  int crop_y;
+  int crop_width;
+  int crop_height;
 };
 
 class YUVFileLoader {
@@ -91,16 +95,11 @@ public:
     return texture_;
   }
 
-  SDL_Texture *scaleAndUpdateTexture(const YUVSetting &setting,
-                                     SDL_Renderer *renderer) {
-    if(scaled_texture_ != nullptr){
-      SDL_DestroyTexture(scaled_texture_);
-      scaled_texture_ = nullptr;
-    }
-
+  SDL_PixelFormatEnum YUVFormatToSDLPixelFormat(YUVFormat yuv_format)
+  {
     auto sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
 
-    switch (setting.format) {
+    switch (yuv_format) {
     case YUVFormat::kYUV420:
       sdl_pixel_format = SDL_PIXELFORMAT_IYUV;
       break;
@@ -125,6 +124,17 @@ public:
       break;
     }
 
+    return sdl_pixel_format;
+  }
+
+  SDL_Texture *scaleAndUpdateTexture(const YUVSetting &setting,
+                                     SDL_Renderer *renderer) {
+    if(scaled_texture_ != nullptr){
+      SDL_DestroyTexture(scaled_texture_);
+      scaled_texture_ = nullptr;
+    }
+
+    auto sdl_pixel_format = YUVFormatToSDLPixelFormat(setting.format);
     scaled_texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
                                  SDL_TEXTUREACCESS_STREAMING, setting.scale_width,
                                  setting.scale_height);
@@ -137,6 +147,28 @@ public:
     }
 
     return scaled_texture_;
+  }
+
+  SDL_Texture *cropAndUpdateTexture(const YUVSetting &setting,
+                                     SDL_Renderer *renderer) {
+    if(crop_texture_ != nullptr){
+      SDL_DestroyTexture(crop_texture_);
+      crop_texture_ = nullptr;
+    }
+
+    auto sdl_pixel_format = YUVFormatToSDLPixelFormat(setting.format);
+    crop_texture_ = SDL_CreateTexture(renderer, sdl_pixel_format,
+                                        SDL_TEXTUREACCESS_STREAMING, setting.crop_width,
+                                        setting.crop_height);
+
+
+    switch (setting.format) {
+    case YUVFormat::kYUV420:
+      cropYUV420(setting);
+      break;
+    }
+
+    return crop_texture_;
   }
 
 private:
@@ -354,6 +386,61 @@ private:
     );
   }
 
+  void cropYUV420(const YUVSetting &setting){
+    if (file_contents_.empty()) {
+      return;
+    }
+
+    auto content_size = file_contents_.size();
+    auto *yuv_data = reinterpret_cast<const uint8_t *>(file_contents_.data());
+
+    auto dst_width = setting.crop_width;
+    auto dst_height = setting.crop_height;
+
+    auto crop_data_size = dst_width * dst_height * 3 / 2;
+    crop_data_.resize(crop_data_size, 0);
+    auto *dst_y_plane = crop_data_.data();
+    auto dst_y_stride = dst_width;
+    auto *dst_u_plane =
+        dst_y_plane + (dst_width * dst_height);
+    auto dst_u_stride = (dst_width+ 1) / 2;
+    auto *dst_v_plane =
+        dst_u_plane + (dst_width * dst_height / 4);
+    auto dst_v_stride = (dst_width + 1) / 2;
+
+    libyuv::ConvertToI420(yuv_data, content_size,
+                          dst_y_plane,
+                          dst_y_stride,
+                          dst_u_plane,
+                          dst_u_stride,
+                          dst_v_plane,
+                          dst_v_stride,
+                          setting.crop_x,
+                          setting.crop_y,
+                          setting.width,
+                          setting.height,
+                          dst_width,
+                          dst_height,
+                          libyuv::RotationMode::kRotate0,
+                          libyuv::FOURCC_YU12);
+
+    SDL_UpdateYUVTexture(
+        crop_texture_, // the texture to update
+        nullptr,  // a pointer to the rectangle of pixels to update, or NULL to
+                         // update the entire texture
+        dst_y_plane,  // the raw pixel data for the Y plane
+        dst_y_stride, // the number of bytes between rows of pixel data for the Y
+                         // plane
+        dst_u_plane,  // the raw pixel data for the U plane
+        dst_u_stride, // the number of bytes between rows of pixel data for the U
+                         // plane
+        dst_v_plane,  // the raw pixel data for the V plane
+        dst_v_stride  // the number of bytes between rows of pixel data for the V
+                         // plane
+    );
+
+  }
+
   void updateTextureYUV420(const YUVSetting &setting) {
     if (file_contents_.empty()) {
       return;
@@ -404,10 +491,12 @@ private:
 
   std::vector<uint8_t> file_contents_;
   std::vector<uint8_t> scaled_data_;
+  std::vector<uint8_t> crop_data_;
   std::vector<uint8_t> fake_128_data_;
   std::string filepath_;
   SDL_Texture *texture_{nullptr};
   SDL_Texture *scaled_texture_{nullptr};
+  SDL_Texture *crop_texture_{nullptr};
 };
 
 #endif // SIMPLE_YUV_VIEWER_MY_YUV_LOADER_H

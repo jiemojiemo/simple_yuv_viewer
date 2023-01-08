@@ -6,6 +6,12 @@ find_package(SDL2 REQUIRED)
 add_subdirectory(libyuv EXCLUDE_FROM_ALL)
 target_include_directories(yuv PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/libyuv/include)
 
+find_package ( JPEG )
+if (JPEG_FOUND)
+    include_directories( ${JPEG_INCLUDE_DIR} )
+    target_link_libraries( yuv PUBLIC ${JPEG_LIBRARY} )
+endif()
+
 if (ENABLE_ASAN)
     message(STATUS "build with ASAN")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")

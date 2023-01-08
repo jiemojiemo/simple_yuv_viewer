@@ -32,6 +32,10 @@ public:
   int yuv_height = 100;
   int scale_width = 100;
   int scale_height = 100;
+  int crop_x = 0;
+  int crop_y = 0;
+  int crop_width = 100;
+  int crop_height = 100;
   bool y_check = true;
   bool u_check = true;
   bool v_check = true;
@@ -171,18 +175,9 @@ private:
     ImGui::End();
   }
 
-
-  void showYUVImage(YUVFileLoader &loader, SDL_Renderer *renderer) {
-    YUVSetting setting{};
-    setting.format = YUVFormat(format_item_index);
-    setting.width = yuv_width;
-    setting.height = yuv_height;
-    setting.show_y = y_check;
-    setting.show_u = u_check;
-    setting.show_v = v_check;
-    setting.scale_width = scale_width;
-    setting.scale_height = scale_height;
-
+  void showYUVOriginImage(YUVFileLoader &loader, SDL_Renderer *renderer,
+                          const YUVSetting& setting)
+  {
     SDL_Texture *image_texture = loader.updateTexture(setting, renderer);
 
     auto image_size = ImVec2{float(yuv_width), float(yuv_height)};
@@ -192,7 +187,11 @@ private:
     ImGui::Image((void *)(intptr_t)image_texture,
                  image_size);
     ImGui::End();
+  }
 
+  void showScaleYUVImage(YUVFileLoader &loader, SDL_Renderer *renderer,
+                         const YUVSetting& setting)
+  {
     if(show_scale_win){
       SDL_Texture *scaled_texture = loader.scaleAndUpdateTexture(setting, renderer);
       auto scaled_image_size = ImVec2{float(scale_width), float(scale_height)};
@@ -205,6 +204,45 @@ private:
                    scaled_image_size);
       ImGui::End();
     }
+  }
+
+  void showCropYUVImage(YUVFileLoader &loader, SDL_Renderer *renderer,
+                         const YUVSetting& setting)
+  {
+    if(show_crop_win){
+      SDL_Texture *crop_texture = loader.cropAndUpdateTexture(setting, renderer);
+      auto image_size = ImVec2{float(crop_width), float(crop_height)};
+
+      ImGui::Begin("Crop", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+      ImGui::InputInt("crop x", &crop_x);
+      ImGui::InputInt("crop y", &crop_y);
+      ImGui::InputInt("crop width", &crop_width);
+      ImGui::InputInt("crop height", &crop_height);
+
+      ImGui::Image((void *)(intptr_t)crop_texture, image_size);
+      ImGui::End();
+    }
+  }
+
+  void showYUVImage(YUVFileLoader &loader, SDL_Renderer *renderer) {
+    YUVSetting setting{};
+    setting.format = YUVFormat(format_item_index);
+    setting.width = yuv_width;
+    setting.height = yuv_height;
+    setting.show_y = y_check;
+    setting.show_u = u_check;
+    setting.show_v = v_check;
+    setting.scale_width = scale_width;
+    setting.scale_height = scale_height;
+    setting.crop_x = crop_x;
+    setting.crop_y = crop_y;
+    setting.crop_width = crop_width;
+    setting.crop_height = crop_height;
+
+    showYUVOriginImage(loader, renderer, setting);
+    showScaleYUVImage(loader, renderer, setting);
+    showCropYUVImage(loader, renderer, setting);
+
   }
 
   void showDragToOpenWindow() {
