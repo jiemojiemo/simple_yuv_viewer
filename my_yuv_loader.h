@@ -363,10 +363,10 @@ private:
     auto dst_y_stride = setting.scale_width;
     auto *dst_u_plane =
         dst_y_plane + (setting.scale_width * setting.scale_height);
-    auto dst_u_stride = (setting.scale_width + 1) / 2;
+    auto dst_u_stride = setting.scale_width / 2;
     auto *dst_v_plane =
         dst_u_plane + (setting.scale_width * setting.scale_height / 4);
-    auto dst_v_stride = (setting.scale_width + 1) / 2;
+    auto dst_v_stride = setting.scale_width / 2;
 
     libyuv::I420Scale(y_plane, y_stride, u_plane, u_stride, v_plane, v_stride,
                       setting.width, setting.height, dst_y_plane, dst_y_stride,
@@ -410,9 +410,9 @@ private:
     auto *dst_y_plane = crop_data_.data();
     auto dst_y_stride = dst_width;
     auto *dst_u_plane = dst_y_plane + (dst_width * dst_height);
-    auto dst_u_stride = (dst_width + 1) / 2;
+    auto dst_u_stride = dst_width / 2;
     auto *dst_v_plane = dst_u_plane + (dst_width * dst_height / 4);
-    auto dst_v_stride = (dst_width + 1) / 2;
+    auto dst_v_stride = dst_width / 2;
 
     libyuv::ConvertToI420(
         yuv_data, content_size, dst_y_plane, dst_y_stride, dst_u_plane,
